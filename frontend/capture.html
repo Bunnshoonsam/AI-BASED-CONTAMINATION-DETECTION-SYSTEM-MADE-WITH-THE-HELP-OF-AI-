@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Microbiology Contamination Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .camera-section {
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        #videoPreview {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 10px;
+            background: #000;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        #canvas {
+            display: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-snap {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-snap:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+
+        .btn-analyze {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-analyze:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .results-section {
+            padding: 20px;
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .result-status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .result-status.contaminated {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .result-status.clean {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .reason-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .reason-box h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .reason-box p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .config-section {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .config-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .config-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 5px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 Contamination Detection</h1>
+            <p>Microbiology Culture Analysis</p>
+        </div>
+
+        <div class="camera-section">
+            <video id="videoPreview" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+
+            <div id="statusMessage" class="status info">
+                Initializing camera...
+            </div>
+
+            <div class="button-group">
+                <button id="snapBtn" class="btn-snap" disabled>📸 Snap</button>
+                <button id="analyzeBtn" class="btn-analyze" disabled>🔍 Analyze</button>
+            </div>
+
+            <button id="resetBtn" class="btn-reset" style="display: none;">🔄 Reset</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing image with AI...</p>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="result-card">
+                <div class="result-header">
+                    <h2>Analysis Results</h2>
+                    <span id="resultStatus" class="result-status">-</span>
+                </div>
+                <div class="confidence-bar">
+                    <div id="confidenceFill" class="confidence-fill" style="width: 0%">0%</div>
+                </div>
+                <div class="reason-box">
+                    <h3>Analysis Details</h3>
+                    <p id="reasonText">-</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <label class="config-label">API Endpoint (change if using different server)</label>
+            <input 
+                type="text" 
+                id="apiEndpoint" 
+                class="config-input" 
+                value="http://localhost:8080/predict"
+                placeholder="http://localhost:8080/predict"
+            >
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let stream = null;
+        let capturedImage = null;
+        const video = document.getElementById('videoPreview');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const snapBtn = document.getElementById('snapBtn');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const loading = document.getElementById('loading');
+        const resultsSection = document.getElementById('resultsSection');
+        const apiEndpointInput = document.getElementById('apiEndpoint');
+
+        /**
+         * Initialize camera access
+         */
+        async function initCamera() {
+            try {
+                // Request camera access with back camera (environment facing)
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',  // Use back camera on phone
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                });
+
+                // Display video stream
+                video.srcObject = stream;
+                video.play();
+
+                // Enable snap button
+                snapBtn.disabled = false;
+                updateStatus('Camera ready. Position culture and tap Snap.', 'success');
+
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                updateStatus('Camera access denied or unavailable. Please allow camera permissions.', 'error');
+                snapBtn.disabled = true;
+            }
+        }
+
+        /**
+         * Update status message
+         */
+        function updateStatus(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.className = `status ${type}`;
+        }
+
+        /**
+         * Capture snapshot from video stream
+         */
+        function captureSnapshot() {
+            if (!stream) {
+                updateStatus('Camera not initialized.', 'error');
+                return;
+            }
+
+            try {
+                // Set canvas dimensions to match video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                // Draw current video frame to canvas
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Convert canvas to base64 data URL
+                capturedImage = canvas.toDataURL('image/jpeg', 0.92);
+
+                // Stop video stream
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+
+                // Update UI
+                video.style.display = 'none';
+                snapBtn.disabled = true;
+                analyzeBtn.disabled = false;
+                resetBtn.style.display = 'block';
+                updateStatus('Image captured! Tap Analyze to check for contamination.', 'success');
+
+            } catch (error) {
+                console.error('Error capturing snapshot:', error);
+                updateStatus('Failed to capture image. Please try again.', 'error');
+            }
+        }
+
+        /**
+         * Convert image to base64 and send to API
+         */
+        async function analyzeImage() {
+            if (!capturedImage) {
+                updateStatus('No image captured. Please snap a photo first.', 'error');
+                return;
+            }
+
+            // Get API endpoint from input
+            const apiEndpoint = apiEndpointInput.value.trim() || 'http://localhost:8080/predict';
+
+            // Show loading state
+            loading.classList.add('active');
+            resultsSection.classList.remove('active');
+            analyzeBtn.disabled = true;
+            updateStatus('Sending image to server...', 'info');
+
+            try {
+                // Prepare request payload
+                const payload = {
+                    image: capturedImage  // Send full data URL (backend will strip prefix)
+                };
+
+                // Make API request
+                const response = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                // Check if request was successful
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    throw new Error(errorData.detail || `Server error: ${response.status}`);
+                }
+
+                // Parse JSON response
+                const result = await response.json();
+
+                // Display results
+                displayResults(result);
+                updateStatus('Analysis complete!', 'success');
+
+            } catch (error) {
+                console.error('Error analyzing image:', error);
+                updateStatus(`Analysis failed: ${error.message}`, 'error');
+            } finally {
+                // Hide loading state
+                loading.classList.remove('active');
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        /**
+         * Display analysis results
+         */
+        function displayResults(result) {
+            // Show results section
+            resultsSection.classList.add('active');
+
+            // Update status badge
+            const resultStatus = document.getElementById('resultStatus');
+            if (result.contaminated) {
+                resultStatus.textContent = 'CONTAMINATED';
+                resultStatus.className = 'result-status contaminated';
+            } else {
+                resultStatus.textContent = 'CLEAN';
+                resultStatus.className = 'result-status clean';
+            }
+
+            // Update confidence bar
+            const confidence = (result.confidence * 100).toFixed(1);
+            const confidenceFill = document.getElementById('confidenceFill');
+            confidenceFill.style.width = `${confidence}%`;
+            confidenceFill.textContent = `${confidence}% confidence`;
+
+            // Update reason text
+            document.getElementById('reasonText').textContent = result.reason || 'No reason provided.';
+        }
+
+        /**
+         * Reset to camera view
+         */
+        function reset() {
+            // Clear captured image
+            capturedImage = null;
+
+            // Reset UI
+            video.style.display = 'block';
+            snapBtn.disabled = false;
+            analyzeBtn.disabled = true;
+            resetBtn.style.display = 'none';
+            resultsSection.classList.remove('active');
+            updateStatus('Ready to capture new image.', 'info');
+
+            // Reinitialize camera
+            initCamera();
+        }
+
+        // Event listeners
+        snapBtn.addEventListener('click', captureSnapshot);
+        analyzeBtn.addEventListener('click', analyzeImage);
+        resetBtn.addEventListener('click', reset);
+
+        // Initialize camera on page load
+        window.addEventListener('load', () => {
+            initCamera();
+        });
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
+
