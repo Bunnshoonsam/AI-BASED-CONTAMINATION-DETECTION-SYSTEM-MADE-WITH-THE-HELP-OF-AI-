@@ -1,38 +1,42 @@
 import os
 import json
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Request
 from dotenv import load_dotenv
 import requests
 
 load_dotenv()
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    raise ValueError("GEMINI_API_KEY not found in .env file")
-
 app = FastAPI()
 
-class ImageRequest(BaseModel):
-    image: str  # base64 data URL
+# Load API key
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    raise RuntimeError("GEMINI_API_KEY not found in .env")
 
 GEMINI_URL = "https://api.generativeai.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent"
 
+
 @app.post("/predict")
-async def predict(req: ImageRequest):
-    # Strip the "data:image/jpeg;base64," prefix
-    if "," in req.image:
-        b64_img = req.image.split(",", 1)[1]
-    else:
-        raise HTTPException(status_code=400, detail="Invalid image format")
+async def predict(req: Request):
+    try:
+        body = await req.json()
+    except:
+        raise HTTPException(400, "Invalid JSON")
+
+    if "image" not in body:
+        raise HTTPException(400, "Missing image")
+
+    # Clean Base64
+    img_raw = body["image"]
+    if "," in img_raw:
+        img_raw = img_raw.split(",", 1)[1]
 
     prompt = """
-    You are an expert microbiology inspector. Analyze this culture image.
-    Respond ONLY in valid JSON:
+    You are a microbiology expert. Look at the culture image and respond ONLY with:
     {
-      "contaminated": true/false,
-      "confidence": 0.0-1.0,
-      "reason": "string"
+        "contaminated": true/false,
+        "confidence": 0.0-1.0,
+        "reason": "short explanation"
     }
     """
 
@@ -40,8 +44,13 @@ async def predict(req: ImageRequest):
         "contents": [
             {
                 "parts": [
-                    {"inline_data": {"mime_type": "image/jpeg", "data": b64_img}},
-                    {"text": prompt}
+                    {
+                        "inline_data": {
+                            "mime_type": "image/jpeg",
+                            "data": img_raw
+                        }
+                    },
+                    { "text": prompt }
                 ]
             }
         ]
@@ -53,23 +62,13 @@ async def predict(req: ImageRequest):
     }
 
     try:
-        response = requests.post(GEMINI_URL, headers=headers, json=payload)
-        response.raise_for_status()
-        data = response.json()
+        r = requests.post(GEMINI_URL, headers=headers, json=payload)
+        r_json = r.json()
 
-        # Extract model text output
-        try:
-            text = data["candidates"][0]["content"]["parts"][0]["text"]
-        except:
-            raise HTTPException(status_code=500, detail="Invalid response from Gemini")
+        text = r_json["candidates"][0]["content"]["parts"][0]["text"]
+        result = json.loads(text)
 
-        # Parse JSON from text
-        try:
-            clean_json = json.loads(text)
-        except:
-            raise HTTPException(status_code=500, detail="Gemini did not return valid JSON")
-
-        return clean_json
+        return result
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(500, f"AI error: {str(e)}")
