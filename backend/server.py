@@ -1,6 +1,7 @@
 import os
 import json
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
+from starlette.requests import Request
 from dotenv import load_dotenv
 import requests
 
