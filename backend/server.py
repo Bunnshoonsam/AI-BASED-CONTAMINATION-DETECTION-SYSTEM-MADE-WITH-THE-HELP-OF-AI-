@@ -4,17 +4,26 @@ from fastapi import FastAPI, HTTPException
 from starlette.requests import Request
 from dotenv import load_dotenv
 import requests
-
-load_dotenv()
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+load_dotenv()
 
 # Load API key
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise RuntimeError("GEMINI_API_KEY not found in .env")
 
-GEMINI_URL = "https://api.generativeai.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent"
+GEMINI_URL = "GEMINI_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent""
 
 
 @app.post("/predict")
