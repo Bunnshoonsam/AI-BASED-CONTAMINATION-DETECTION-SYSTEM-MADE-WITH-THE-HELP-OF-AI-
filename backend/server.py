@@ -5,7 +5,13 @@ from starlette.requests import Request
 from dotenv import load_dotenv
 import requests
 from fastapi.middleware.cors import CORSMiddleware
+import requests
 
+url = "https://ai-based-contamination-detection-system.onrender.com/predict"
+
+response = requests.post(url)
+
+print(response.json())
 app = FastAPI()
 
 @app.get("/")
