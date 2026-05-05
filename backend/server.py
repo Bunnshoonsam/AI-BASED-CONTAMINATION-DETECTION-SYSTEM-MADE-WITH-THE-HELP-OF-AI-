@@ -7,13 +7,6 @@ import requests
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 
-url = "https://ai-based-contamination-detection-system.onrender.com/predict"
-
-response = requests.post(url)
-
-print(response.json())
-app = FastAPI()
-
 @app.get("/")
 def test():
     return {"status": "alive"}
