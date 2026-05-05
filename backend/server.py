@@ -8,6 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+@app.get("/")
+def test():
+    return {"status": "alive"}
+
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
