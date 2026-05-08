@@ -3,12 +3,12 @@ import json
 import requests
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from starlette.requests import Request
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,12 +28,20 @@ if not GEMINI_API_KEY:
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent"
 
 
+# FRONTEND SERVE ROUTE
 @app.get("/")
+def serve_frontend():
+    return FileResponse("../frontend/capture.html")
+
+
+@app.get("/health")
 def test():
     return {"status": "alive"}
 
+
 @app.post("/predict")
 async def predict(req: Request):
+
     try:
         body = await req.json()
     except:
@@ -44,11 +52,14 @@ async def predict(req: Request):
 
     # Clean Base64
     img_raw = body["image"]
+
     if "," in img_raw:
         img_raw = img_raw.split(",", 1)[1]
 
     prompt = """
-    You are a microbiology expert. Look at the culture image and respond ONLY with:
+    You are a microbiology expert.
+    Look at the culture image and respond ONLY with:
+
     {
         "contaminated": true/false,
         "confidence": 0.0-1.0,
@@ -66,7 +77,9 @@ async def predict(req: Request):
                             "data": img_raw
                         }
                     },
-                    { "text": prompt }
+                    {
+                        "text": prompt
+                    }
                 ]
             }
         ]
@@ -78,10 +91,16 @@ async def predict(req: Request):
     }
 
     try:
-        r = requests.post(GEMINI_URL, headers=headers, json=payload)
+        r = requests.post(
+            GEMINI_URL,
+            headers=headers,
+            json=payload
+        )
+
         r_json = r.json()
 
         text = r_json["candidates"][0]["content"]["parts"][0]["text"]
+
         result = json.loads(text)
 
         return result
