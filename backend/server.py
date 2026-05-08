@@ -7,7 +7,12 @@ from fastapi.responses import FileResponse
 from starlette.requests import Request
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
+from fastapi.responses import FileResponse
 
+BASE_DIR = Path(__file__).resolve().parent
+
+FRONTEND_PATH = (BASE_DIR / "../frontend/capture.html").resolve()
 app = FastAPI()
 
 app.add_middleware(
@@ -31,7 +36,7 @@ GEMINI_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-fla
 # FRONTEND SERVE ROUTE
 @app.get("/")
 def serve_frontend():
-    return FileResponse("../frontend/capture.html")
+    return FileResponse(FRONTEND_PATH)
 
 
 @app.get("/health")
