@@ -101,12 +101,19 @@ async def predict(req: Request):
             headers=headers,
             json=payload
         )
+        print(r,"response from gemini")
 
         r_json = r.json()
+        
+        print(r_json,"response from gemini json")
 
         text = r_json["candidates"][0]["content"]["parts"][0]["text"]
+        
+        print(text,"response from gemini text")
 
         result = json.loads(text)
+        
+        print(result,"reponse from gemini_result")
 
         return result
 
